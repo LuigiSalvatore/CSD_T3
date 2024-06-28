@@ -1,7 +1,8 @@
 #include <hf-risc.h>
 #include "vga_drv.h"
 
-#define NUMBER_OF_BARS = 13*9
+#define VERT_BAR_BASE	9
+#define NUMBER_OF_BARS  13 * VERT_BAR_BASE
 #define A_LEFT			0x2190
 #define A_UP			0x2191
 #define A_RIGHT			0x2192
@@ -34,38 +35,83 @@ struct bars {
 	int cor;
 };
 
-void init_bars(struct bars *b[NUMBER_OF_BARS])
-{
-	string colors[9][10] = {RED, LRED, YELLOW, GREEN, LGREEN, CYAN, LCYAN, BLUE, LBLUE};
-
-	for (int i = 0, l = 0; i < 280; i += 21) {
-		int base = 5
-		for(int j = 0; j < 9 ; j++, l++){
-			display_frectangle	(5+i, base,	20, 8, colors[j]);
-			b[l]->x = 5+i;
-			b[l]->y = base;
-			b[l]->w = 20;
-			b[l]->h = 8;
-			b[l]->cor = colors[j];
-			base += 9;
-		}
-	}
-}
-
 // void init_bars(struct bars *b[NUMBER_OF_BARS])
 // {
+// 	char colors[9][10] = {{RED},{ LRED},{ YELLOW},{ GREEN},{ LGREEN},{ CYAN},{ LCYAN},{ BLUE},{ LBLUE}};
+
 // 	for (int i = 0, l = 0; i < 280; i += 21) {
-// 		display_frectangle(5+i, 5, 20, 8, RED);
-// 		display_frectangle(5+i, 14, 20, 8, LRED);
-// 		display_frectangle(5+i, 23, 20, 8, YELLOW);
-// 		display_frectangle(5+i, 32, 20, 8, GREEN);
-// 		display_frectangle(5+i, 41, 20, 8, LGREEN);
-// 		display_frectangle(5+i, 50, 20, 8, CYAN);
-// 		display_frectangle(5+i, 59, 20, 8, LCYAN);
-// 		display_frectangle(5+i, 68, 20, 8, BLUE);
-// 		display_frectangle(5+i, 77, 20, 8, LBLUE);
+// 		int base = 5;
+// 		for(int j = 0; j < 9 ; j++, l++) {
+// 			display_frectangle	(5+i, base,	20, 8, colors[j]);
+// 			b[l]->x = 5+i;
+// 			b[l]->y = base;
+// 			b[l]->w = 20;
+// 			b[l]->h = 8;
+// 			b[l]->cor = colors[j];
+// 			base += 9;
+// 		}
 // 	}
 // }
+
+void init_bars(struct bars *b[NUMBER_OF_BARS])
+ {
+ 	for (int i = 0, l = 0; i < 280; i += 21) {
+ 		display_frectangle(5+i, 5, 20, 8, RED);
+		b[l]->x = 5+i;
+		b[l]->y = 5;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = RED;
+ 		display_frectangle(5+i, 14, 20, 8, LRED);
+		b[l]->x = 5+i;
+		b[l]->y = 14;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = LRED;
+ 		display_frectangle(5+i, 23, 20, 8, YELLOW);
+		b[l]->x = 5+i;
+		b[l]->y = 23;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = YELLOW;
+ 		display_frectangle(5+i, 32, 20, 8, GREEN);
+		b[l]->x = 5+i;
+		b[l]->y = 32;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = GREEN;
+ 		display_frectangle(5+i, 41, 20, 8, LGREEN);
+		b[l]->x = 5+i;
+		b[l]->y = 41;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = LGREEN;
+ 		display_frectangle(5+i, 50, 20, 8, CYAN);
+		b[l]->x = 5+i;
+		b[l]->y = 50;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = CYAN;
+ 		display_frectangle(5+i, 59, 20, 8, LCYAN);
+		b[l]->x = 5+i;
+		b[l]->y = 59;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = LCYAN;
+ 		display_frectangle(5+i, 68, 20, 8, BLUE);
+		b[l]->x = 5+i;
+		b[l]->y = 68;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = BLUE;
+ 		display_frectangle(5+i, 77, 20, 8, LBLUE);
+		b[l]->x = 5+i;
+		b[l]->y = 77;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l++]->cor = MAGENTA;
+ 	}
+ }
 
 void init_paddle(struct paddle *p) {
 	p->x = 130;
@@ -122,10 +168,11 @@ void test_limits(struct ball_s *ball, char *limits)
 	limits[8] = display_getpixel(ballx+1, bally+1);		//U_right
 }
 
-char test_collision(struct ball_s *ball, char *dir)
+char test_collision(struct ball_s *ball, char *dir, struct bars *b[NUMBER_OF_BARS])
 {
 	char hit = 0;
-	int i;
+	char cor_hit;
+	int i, j, pos_hit;
 	char limits[9];
 	
 	if ((ball->spx == ball->spxcnt) || (ball->spy == ball->spycnt)) {
@@ -136,51 +183,73 @@ char test_collision(struct ball_s *ball, char *dir)
 			for (i = 0; i < 9; i++) {
 				if (limits[i]) {
 					hit = 1;
+					cor_hit = limits[i];
 					*dir = directions[i];
 					break;
 				}
 			}
 			
+			switch (cor_hit) {
+				case RED: i = 0; break;
+				case LRED: i = 1; break;
+				case YELLOW: i = 2; break;
+				case GREEN: i = 3; break;
+				case LGREEN: i = 4; break;
+				case CYAN: i = 5; break;
+				case LCYAN: i = 6; break;
+				case BLUE: i = 7; break;
+				case MAGENTA: i = 8; break;
+				default: return 0;
+			}
+
+			for (j = 0; j < 13; i += VERT_BAR_BASE, j++) {
+				if (ball->ballx <= (b[i]->x + b[i]->w) && ball->ballx >= (b[i]->x + b[i]->w)) {
+					display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+					break;
+				}
+			}
+
 			if (limits[1]) /*DOWN*/	{ 
 				ball->dy = -ball->dy;
 				/*Search for block under the ball*/
-				for (i = 0; i < NUMBER_OF_BARS; i++) {
-					if ((ball->ballx >= b[i]->x) && (ball->ballx <= b[i]->x + b[i]->w) && (ball->bally + 1 == b[i]->y)) {
-						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
-						break;
-					}
-				}
+				// for (i = 0; i < NUMBER_OF_BARS; i++) {
+				// 	if ((ball->ballx >= b[i]->x) && (ball->ballx <= b[i]->x + b[i]->w) && (ball->bally + 1 == b[i]->y)) {
+				// 		display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+				// 		break;
+				// 	}
+				// }
 			}
+
 			if (limits[3]) /*LEFT*/ { 
 				ball->dx = -ball->dx;
 				/*Search for block to the left of the ball*/
-				for (i = 0; i < NUMBER_OF_BARS; i++) {
-					if ((ball->ballx - 1 >= b[i]->x) && (ball->ballx - 1 <= b[i]->x + b[i]->w) && (ball->bally  == b[i]->y)) {
-						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
-						break;
-					}
-				}
+				// for (i = 0; i < NUMBER_OF_BARS; i++) {
+				// 	if ((ball->ballx - 1 >= b[i]->x) && (ball->ballx - 1 <= b[i]->x + b[i]->w) && (ball->bally  == b[i]->y)) {
+				// 		display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+				// 		break;
+				// 	}
+				// }
 
 			}
 			if (limits[5])/*RIGHT*/{ 
 				ball->dx = -ball->dx;
 				/*Search for block to the right of the ball*/
-				for (i = 0; i < NUMBER_OF_BARS; i++) {
-					if ((ball->ballx + 1 >= b[i]->x) && (ball->ballx + 1 <= b[i]->x + b[i]->w) && (ball->bally  == b[i]->y))/*Talvez tenha que adicionar um && bally + h*/ {
-						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
-						break;
-					}
-				}
+				// for (i = 0; i < NUMBER_OF_BARS; i++) {
+				// 	if ((ball->ballx + 1 >= b[i]->x) && (ball->ballx + 1 <= b[i]->x + b[i]->w) && (ball->bally  == b[i]->y))/*Talvez tenha que adicionar um && bally + h*/ {
+				// 		display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+				// 		break;
+				// 	}
+				// }
 			}			
 			if (limits[7]) /*UP*/{ 
 				ball->dy = -ball->dy;
 				/*Search for block above the ball*/
-				for (i = 0; i < NUMBER_OF_BARS; i++) {
-					if ((ball->ballx >= b[i]->x) && (ball->ballx <= b[i]->x + b[i]->w) && (ball->bally - 1 == b[i]->y)) {
-						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
-						break;
-					}
-				}
+				// for (i = 0; i < NUMBER_OF_BARS; i++) {
+				// 	if ((ball->ballx >= b[i]->x) && (ball->ballx <= b[i]->x + b[i]->w) && (ball->bally - 1 == b[i]->y)) {
+				// 		display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+				// 		break;
+				// 	}
+				// }
 			}
 
 			if (limits[0]) {								//D_left
@@ -261,6 +330,8 @@ int main(void)
 	struct paddle	*pad_pointer = &pad;
 	struct bars		*b[NUMBER_OF_BARS];
 	char hit;
+	char dir;
+	
 
 	init_display(b);
 	init_paddle(pad_pointer);
@@ -270,11 +341,11 @@ int main(void)
 	init_input();
 
 	while (1) {
-		hit = test_collision(pball1);
+		if (pball1->bally <= 85 || pball1->bally >= 5) hit = test_collision(pball1, &dir, b);
 		update_ball(pball1, hit);
-		hit = test_collision(pball2);
+		if (pball2->bally <= 85 || pball2->bally >= 5) hit = test_collision(pball2, &dir, b);
 		update_ball(pball2, hit);
-		hit = test_collision(pball3);
+		if (pball3->bally <= 85 || pball3->bally >= 5) hit = test_collision(pball3, &dir, b);
 		update_ball(pball3, hit);
 		delay_ms(1);
 		get_input(pad_pointer);
