@@ -22,7 +22,7 @@ struct ball_s {
 };
 
 struct paddle {
-	int x, y;
+	unsigned int x, y;
 	int cor;
 	int spx;
 	int div;
@@ -30,7 +30,7 @@ struct paddle {
 };
 
 struct bars {
-	int x, y;
+	unsigned int x, y;
 	int w, h;
 	int cor;
 };
@@ -54,7 +54,7 @@ struct bars {
 // }
 
 void init_bars(struct bars *b[NUMBER_OF_BARS])
- {
+{
  	for (int i = 0, l = 0; i < 280; i += 21) {
  		display_frectangle(5+i, 5, 20, 8, RED);
 		b[l]->x = 5+i;
@@ -109,7 +109,7 @@ void init_bars(struct bars *b[NUMBER_OF_BARS])
 		b[l]->y = 77;
 		b[l]->w = 20;
 		b[l]->h = 8;
-		b[l++]->cor = MAGENTA;
+		b[l++]->cor = LBLUE;
  	}
  }
 
@@ -128,6 +128,9 @@ void init_display(struct bars *b[NUMBER_OF_BARS])
 {
 	display_background(BLACK);
 	init_bars(b);
+	for (int i = 0; i < NUMBER_OF_BARS; i++) {
+		printf("Barra %d, (%d, %d), w: %d, h: %d, cor: %d\n", i, b[i]->x, b[i]->y, b[i]->w, b[i]->h, b[i]->cor);
+	}
 }
 
 void init_ball(struct ball_s *ball, int x, int y, int dx, int dy, int spx, int spy)
@@ -182,6 +185,7 @@ char test_collision(struct ball_s *ball, char *dir, struct bars *b[NUMBER_OF_BAR
 			char directions[9] = {A_DOWN_LEFT, A_DOWN, A_DOWN_RIGHT, A_LEFT, 0, A_RIGHT, A_UP_LEFT, A_UP, A_UP_RIGHT};
 			for (i = 0; i < 9; i++) {
 				if (limits[i]) {
+					printf("Hit! Cor: %d\n", limits[i]);
 					hit = 1;
 					cor_hit = limits[i];
 					*dir = directions[i];
@@ -198,14 +202,17 @@ char test_collision(struct ball_s *ball, char *dir, struct bars *b[NUMBER_OF_BAR
 				case CYAN: i = 5; break;
 				case LCYAN: i = 6; break;
 				case BLUE: i = 7; break;
-				case MAGENTA: i = 8; break;
-				default: return 0;
+				case LBLUE: i = 8; break;
+				default: i = -1; break;
 			}
 
-			for (j = 0; j < 13; i += VERT_BAR_BASE, j++) {
-				if (ball->ballx <= (b[i]->x + b[i]->w) && ball->ballx >= (b[i]->x + b[i]->w)) {
-					display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
-					break;
+			if (i != -1) {
+				for (j = 0; j < 13; i += VERT_BAR_BASE, j++) {
+					if (ball->ballx <= (b[i]->x + b[i]->w) && ball->ballx >= b[i]->x) {
+						//printf("Deletando bloco em (%d, %d)\n", b[i]->x, b[i]->y);
+						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+						break;
+					}
 				}
 			}
 
@@ -332,21 +339,18 @@ int main(void)
 	char hit;
 	char dir;
 	
+	heap_init((uint32_t *)&_heap_start, 8192);
+
+	for (int i = 0; i < NUMBER_OF_BARS; i++) b[i] = malloc(sizeof(struct bars));
 
 	init_display(b);
 	init_paddle(pad_pointer);
 	init_ball(pball1, 20, 200, 1, -1, 3, 7);
-	init_ball(pball2, 30, 200, 1, -1, 5, 11);
-	init_ball(pball3, 115, 150, -1, -1, 10, 3);
 	init_input();
 
 	while (1) {
 		if (pball1->bally <= 85 || pball1->bally >= 5) hit = test_collision(pball1, &dir, b);
 		update_ball(pball1, hit);
-		if (pball2->bally <= 85 || pball2->bally >= 5) hit = test_collision(pball2, &dir, b);
-		update_ball(pball2, hit);
-		if (pball3->bally <= 85 || pball3->bally >= 5) hit = test_collision(pball3, &dir, b);
-		update_ball(pball3, hit);
 		delay_ms(1);
 		get_input(pad_pointer);
 	}
