@@ -141,10 +141,47 @@ char test_collision(struct ball_s *ball, char *dir)
 				}
 			}
 			
-			if (limits[1]) ball->dy = -ball->dy;			//Down
-			if (limits[3]) ball->dx = -ball->dx;			//Left
-			if (limits[5]) ball->dx = -ball->dx;			//Right
-			if (limits[7]) ball->dy = -ball->dy;			//Up
+			if (limits[1]) /*DOWN*/	{ 
+				ball->dy = -ball->dy;
+				/*Search for block under the ball*/
+				for (i = 0; i < NUMBER_OF_BARS; i++) {
+					if ((ball->ballx >= b[i]->x) && (ball->ballx <= b[i]->x + b[i]->w) && (ball->bally + 1 == b[i]->y)) {
+						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+						break;
+					}
+				}
+			}
+			if (limits[3]) /*LEFT*/ { 
+				ball->dx = -ball->dx;
+				/*Search for block to the left of the ball*/
+				for (i = 0; i < NUMBER_OF_BARS; i++) {
+					if ((ball->ballx - 1 >= b[i]->x) && (ball->ballx - 1 <= b[i]->x + b[i]->w) && (ball->bally  == b[i]->y)) {
+						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+						break;
+					}
+				}
+
+			}
+			if (limits[5])/*RIGHT*/{ 
+				ball->dx = -ball->dx;
+				/*Search for block to the right of the ball*/
+				for (i = 0; i < NUMBER_OF_BARS; i++) {
+					if ((ball->ballx + 1 >= b[i]->x) && (ball->ballx + 1 <= b[i]->x + b[i]->w) && (ball->bally  == b[i]->y))/*Talvez tenha que adicionar um && bally + h*/ {
+						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+						break;
+					}
+				}
+			}			
+			if (limits[7]) /*UP*/{ 
+				ball->dy = -ball->dy;
+				/*Search for block above the ball*/
+				for (i = 0; i < NUMBER_OF_BARS; i++) {
+					if ((ball->ballx >= b[i]->x) && (ball->ballx <= b[i]->x + b[i]->w) && (ball->bally - 1 == b[i]->y)) {
+						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+						break;
+					}
+				}
+			}
 
 			if (limits[0]) {								//D_left
 				if (!limits[3]) ball->dx = -ball->dx;
