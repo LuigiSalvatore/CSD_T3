@@ -23,10 +23,12 @@ struct ball_s {
 
 struct paddle {
 	unsigned int x, y;
-	int cor;
+	unsigned int cor;
 	int spx;
-	int div;
-	int w, h;
+	int lastdir;
+	unsigned int div;
+	unsigned int w, h;
+	unsigned int moment;
 };
 
 struct bars {
@@ -118,7 +120,9 @@ void init_paddle(struct paddle *p) {
 	p->y = 170;
 	p->cor = WHITE;
 	p->spx = 1;
-	p->div = 10;
+	p->div = 30;
+	p->moment = 0;
+	p->lastdir = 0;
 	p->w = 20;
 	p->h = 4;
 	display_frectangle(p->x, p->y, p->w, p->h, p->cor); //paddle
@@ -171,7 +175,7 @@ void test_limits(struct ball_s *ball, char *limits)
 	limits[8] = display_getpixel(ballx+1, bally+1);		//U_right
 }
 
-char test_collision(struct ball_s *ball, char *dir, struct bars *b[NUMBER_OF_BARS])
+char test_collision(struct ball_s *ball, char *dir, struct bars *b[NUMBER_OF_BARS], struct paddle *p)
 {
 	char hit = 0;
 	char cor_hit;
@@ -192,7 +196,18 @@ char test_collision(struct ball_s *ball, char *dir, struct bars *b[NUMBER_OF_BAR
 					break;
 				}
 			}
-			
+			if (cor_hit == WHITE) {
+				unsigned int a = p->x;
+				unsigned int b = p->x + p->w;
+				unsigned int m = (a + b) / 2;
+				if (a-3 < m && a+3 > m) {
+					ball->spy = (ball->spy < 5 ? ball->spy : ball->spy - 3);
+					ball->spx = (ball->spx > 15 ? ball->spx : ball->spx + 1);
+				} else {
+					ball->spx = (ball->spx < 5 ? ball->spx : ball->spx - 3);
+					ball->spy = (ball->spy > 15 ? ball->spy : ball->spy + 1);
+				}
+			}
 			switch (cor_hit) {
 				case RED: i = 0; break;
 				case LRED: i = 1; break;
@@ -313,18 +328,51 @@ void update_ball(struct ball_s *ball, char hit)
 
 void get_input(struct paddle *p)
 {
-	if (GPIOB->IN & MASK_P10) { // left
+	if (GPIOB->IN & MASK_P10 && p->x > 5) { // left
 		int temp = p->x;
-		p->x = (p->x - p->spx < 0 ? 0 : p->x - p->spx);
-		display_frectangle(temp, p->y, p->w, p->h, BLACK);
-		display_frectangle(p->x, p->y, p->w, p->h, p->cor);
-	}	
-	if (GPIOB->IN & MASK_P11) { // right
+		p->lastdir = 1;
+		if (p->div > 0) p->div--;
+		else {
+			p->x = (p->x - p->moment < 0 ? 0 : p->x - p->moment);
+			p->moment = (p->moment < 3 ? p->moment + 1 : 3);
+			display_frectangle(temp, p->y, (p->w), p->h, BLACK);
+			display_frectangle(p->x, p->y, (p->w), p->h, p->cor);
+			p->div = 9;
+		}
+	} else if (p->moment > 3 && p->lastdir == -1 && p->x > 5) {
 		int temp = p->x;
-		p->x = (p->x + p->spx > 300 ? 300 : p->x + p->spx);
-		display_frectangle(temp, p->y, p->w, p->h, BLACK);
-		display_frectangle(p->x, p->y, p->w, p->h, p->cor);
+		if (p->div > 0) p->div--;
+		else {
+			p->x = (p->x - p->moment > 0 ? 0 : p->x - p->moment);
+			p->moment--;
+			display_frectangle(temp, p->y, (p->w), p->h, BLACK);
+			display_frectangle(p->x, p->y, (p->w), p->h, p->cor);
+			p->div = 9;
+		}
 	}
+	if (GPIOB->IN & MASK_P11 && p->x < 280) { // right
+		p->lastdir = -1;
+		int temp = p->x;
+		if (p->div > 0) p->div--;
+		else {
+			p->x = (p->x + p->moment > 280 ? 280 : p->x + p->moment);
+			p->moment = (p->moment < 3 ? p->moment + 1 : 3);
+			display_frectangle(temp, p->y, (p->w), p->h, BLACK);
+			display_frectangle(p->x, p->y, (p->w), p->h, p->cor);
+			p->div = 9;
+		}
+	} else if (p->moment > 5 && p->lastdir == -1) {
+		int temp = p->x;
+		if (p->div > 0) p->div--;
+		else {
+			p->x = (p->x + p->moment > 280 ? 280 : p->x + p->moment);
+			p->moment--;
+			display_frectangle(temp, p->y, (p->w), p->h, BLACK);
+			display_frectangle(p->x, p->y, (p->w), p->h, p->cor);
+			p->div = 9;
+		}
+	}
+	if (p->moment == 0) p->lastdir = 0;
 }
 
 int main(void)
@@ -345,11 +393,11 @@ int main(void)
 
 	init_display(b);
 	init_paddle(pad_pointer);
-	init_ball(pball1, 20, 200, 1, -1, 3, 7);
+	init_ball(pball1, 20, 200, 1, -1, 10, 10);
 	init_input();
 
 	while (1) {
-		if (pball1->bally <= 85 || pball1->bally >= 5) hit = test_collision(pball1, &dir, b);
+		hit = test_collision(pball1, &dir, b, pad_pointer);
 		update_ball(pball1, hit);
 		delay_ms(1);
 		get_input(pad_pointer);
