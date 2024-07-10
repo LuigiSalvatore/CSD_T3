@@ -375,6 +375,20 @@ void get_input(struct paddle *p)
 	if (p->moment == 0) p->lastdir = 0;
 }
 
+void update_points(unsigned int points, char *d0, char *d1, char *d2, char *d3, char *d4) {
+	d0 = points / 10000;
+	d1 = (points - d0) / 1000;
+	d2 = (points - d0 - d1) / 100;
+	d3 = (points - d0 - d1 - d2) / 10;
+	d4 = (points - d0 - d1 - d2 - d3);
+	printf("%c%c%c%c%c", d0, d1, d2, d3, d4);
+	display_char(d0, 150, 150, 1, WHITE);
+	display_char(d1, 152, 150, 1, WHITE);
+	display_char(d2, 154, 150, 1, WHITE);
+	display_char(d3, 156, 150, 1, WHITE);
+	display_char(d4, 158, 150, 1, WHITE);
+}
+
 int main(void)
 {
 	struct ball_s	ball1, ball2, ball3;
@@ -384,6 +398,13 @@ int main(void)
 	struct ball_s	*pball3 = &ball3;
 	struct paddle	*pad_pointer = &pad;
 	struct bars		*b[NUMBER_OF_BARS];
+	unsigned int points = 0;
+	char d0_adr, d1_adr, d2_adr, d3_adr, d4_adr = '';
+	char *d0 = d0_adr;
+	char *d1 = d1_adr;
+	char *d2 = d2_adr;
+	char *d3 = d3_adr;
+	char *d4 = d4_adr;
 	char hit;
 	char dir;
 	
@@ -394,10 +415,13 @@ int main(void)
 	init_display(b);
 	init_paddle(pad_pointer);
 	init_ball(pball1, 20, 200, 1, -1, 10, 10);
+	update_points(points, d0, d1, d2, d3, d4);
 	init_input();
 
 	while (1) {
 		hit = test_collision(pball1, &dir, b, pad_pointer);
+		if (hit) points += 100;
+		update_points(points, d0, d1, d2, d3, d4);
 		update_ball(pball1, hit);
 		delay_ms(1);
 		get_input(pad_pointer);
