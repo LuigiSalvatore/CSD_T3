@@ -1,0 +1,428 @@
+#include <hf-risc.h>
+#include "vga_drv.h"
+
+#define VERT_BAR_BASE	9
+#define NUMBER_OF_BARS  13 * VERT_BAR_BASE
+#define A_LEFT			0x0
+#define A_UP			0x1
+#define A_RIGHT			0x2
+#define A_DOWN			0x3
+#define A_UP_LEFT		0x4
+#define A_UP_RIGHT		0x5
+#define A_DOWN_LEFT		0x6
+#define A_DOWN_RIGHT	0x7
+#define SCREEN_MAX_X	300
+#define SCREEN_MAX_Y	218
+#define HIT_LEFT		'L'
+#define HIT_RIGHT		'R'
+#define HIT_UP			'U'
+#define HIT_DOWN		'D'
+#define NO_HIT			'N'
+#define LAYER_BASE 		4
+#define LAYER_0			LAYER_BASE + 1 + 8 	// 13
+#define LAYER_1			LAYER_0 + 1 + 8		// 22
+#define LAYER_2			LAYER_1 + 1 + 8		// 31
+#define LAYER_3			LAYER_2 + 1 + 8		// 40
+#define LAYER_4			LAYER_3 + 1 + 8		// 49
+#define LAYER_5			LAYER_4 + 1 + 8		// 58
+#define LAYER_6			LAYER_5 + 1 + 8		// 67
+#define LAYER_7			LAYER_6 + 1 + 8		// 76
+#define LAYER_8			LAYER_7 + 1 + 8		// 85
+
+
+struct ball_s {
+	unsigned int ballx, bally;
+	unsigned int last_ballx, last_bally;
+	int dx, dy;
+	int spx, spy;
+	int spxcnt, spycnt;
+};
+
+struct paddle {
+	unsigned int x, y;
+	int cor;
+	int spx;
+	int div;
+	int w, h;
+};
+
+struct bars {
+	unsigned int x, y;
+	int w, h;
+	int cor;
+	char deleted;
+};
+
+void init_bars(struct bars *b[NUMBER_OF_BARS])
+{
+ 	for (int i = 0, l = 0; i < 280; i += 21) {
+ 		display_frectangle(5+i, 5, 20, 8, RED);
+		b[l]->x = 5+i;
+		b[l]->y = 5;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = RED;
+ 		display_frectangle(5+i, 14, 20, 8, LRED);
+		b[l]->x = 5+i;
+		b[l]->y = 14;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = LRED;
+ 		display_frectangle(5+i, 23, 20, 8, YELLOW);
+		b[l]->x = 5+i;
+		b[l]->y = 23;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = YELLOW;
+ 		display_frectangle(5+i, 32, 20, 8, GREEN);
+		b[l]->x = 5+i;
+		b[l]->y = 32;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = GREEN;
+ 		display_frectangle(5+i, 41, 20, 8, LGREEN);
+		b[l]->x = 5+i;
+		b[l]->y = 41;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = LGREEN;
+ 		display_frectangle(5+i, 50, 20, 8, CYAN);
+		b[l]->x = 5+i;
+		b[l]->y = 50;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = CYAN;
+ 		display_frectangle(5+i, 59, 20, 8, LCYAN);
+		b[l]->x = 5+i;
+		b[l]->y = 59;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = LCYAN;
+ 		display_frectangle(5+i, 68, 20, 8, BLUE);
+		b[l]->x = 5+i;
+		b[l]->y = 68;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = BLUE;
+ 		display_frectangle(5+i, 77, 20, 8, LBLUE);
+		b[l]->x = 5+i;
+		b[l]->y = 77;
+		b[l]->w = 20;
+		b[l]->h = 8;
+		b[l]->deleted = 0;
+		b[l++]->cor = LBLUE;
+ 	}
+ }
+
+void init_paddle(struct paddle *p) {
+	p->x = 130;
+	p->y = 170;
+	p->cor = WHITE;
+	p->spx = 1;
+	p->div = 10;
+	p->w = 20;
+	p->h = 4;
+	display_frectangle(p->x, p->y, p->w, p->h, p->cor); //paddle
+}
+
+void init_display(struct bars *b[NUMBER_OF_BARS])
+{
+	display_background(BLACK);
+	init_bars(b);
+	for (int i = 0; i < NUMBER_OF_BARS; i++) {
+		printf("Barra %d, (%d, %d), w: %d, h: %d, cor: %d\n", i, b[i]->x, b[i]->y, b[i]->w, b[i]->h, b[i]->cor);
+	}
+}
+
+void init_ball(struct ball_s *ball, int x, int y, int dx, int dy, int spx, int spy)
+{
+	ball->ballx = x;
+	ball->bally = y;
+	ball->last_ballx = ball->ballx;
+	ball->last_bally = ball->bally;
+	ball->dx = dx;
+	ball->dy = dy;
+	ball->spx = spx;
+	ball->spxcnt = spx;
+	ball->spy = spy;
+	ball->spycnt = spy;
+}
+
+void init_input()
+{
+	/* configure GPIOB pins 8 .. 12 as inputs */
+	GPIOB->DDR &= ~(MASK_P8 | MASK_P9 | MASK_P10 | MASK_P11 | MASK_P12);
+}
+
+void test_limits(struct ball_s *ball, char *limits)
+{
+	unsigned int ballx, bally;
+	
+	ballx = ball->ballx;
+	bally = ball->bally;
+	
+	limits[0] = display_getpixel(ballx-1, bally-1);		//D_left
+	limits[1] = display_getpixel(ballx, bally-1);		//Down
+	limits[2] = display_getpixel(ballx+1, bally-1);		//D_right
+	limits[3] = display_getpixel(ballx-1, bally);		//Left
+	limits[4] = 0;
+	limits[5] = display_getpixel(ballx+1, bally);		//Right
+	limits[6] = display_getpixel(ballx-1, bally+1);		//U_left
+	limits[7] = display_getpixel(ballx, bally+1);		//Up
+	limits[8] = display_getpixel(ballx+1, bally+1);		//U_right
+}
+
+char test_collision(struct ball_s *ball, char *dir, struct bars *b[NUMBER_OF_BARS])
+{
+	char hit = 0;
+	char cor_hit;
+	int i, j, pos_hit;
+	char limits[9];
+	
+	if ((ball->spx == ball->spxcnt) || (ball->spy == ball->spycnt)) {
+		test_limits(ball, limits);
+
+		if ((ball->ballx < VGA_WIDTH-1) && (ball->ballx > 0) && (ball->bally < VGA_HEIGHT-1) && (ball->bally > 0)) {
+			char directions[9] = {A_DOWN_LEFT, A_DOWN, A_DOWN_RIGHT, A_LEFT, 0, A_RIGHT, A_UP_LEFT, A_UP, A_UP_RIGHT};
+			for (i = 0; i < 9; i++) {
+				if (limits[i]) {
+					printf("Hit! Cor: %d\n", limits[i]);
+					hit = 1;
+					cor_hit = limits[i];
+					*dir = directions[i];
+					break;
+				}
+			}
+			
+			switch (cor_hit) {
+				case RED: i = 0; break;
+				case LRED: i = 1; break;
+				case YELLOW: i = 2; break;
+				case GREEN: i = 3; break;
+				case LGREEN: i = 4; break;
+				case CYAN: i = 5; break;
+				case LCYAN: i = 6; break;
+				case BLUE: i = 7; break;
+				case LBLUE: i = 8; break;
+				default: i = -1; break;
+			}
+
+			if (i != -1) {
+				for (j = 0; j < 13; i += VERT_BAR_BASE, j++) {
+					if (ball->ballx <= (b[i]->x + b[i]->w) && ball->ballx >= b[i]->x) {
+						//printf("Deletando bloco em (%d, %d)\n", b[i]->x, b[i]->y);
+						display_frectangle(b[i]->x, b[i]->y, b[i]->w, b[i]->h, BLACK);
+						break;
+					}
+				}
+			}
+
+			if (limits[1]) /*DOWN*/	ball->dy = -ball->dy;
+
+			if (limits[3]) /*LEFT*/ ball->dx = -ball->dx;
+
+			if (limits[5])/*RIGHT*/	ball->dx = -ball->dx;
+
+			if (limits[7]) /*UP*/	ball->dy = -ball->dy;
+			
+			if (limits[0]) {								//D_left
+				if (!limits[3]) ball->dx = -ball->dx;
+				if (!limits[1]) ball->dy = -ball->dy;
+			}
+			if (limits[2]) {								//D_right
+				if (!limits[5]) ball->dx = -ball->dx;
+				if (!limits[1]) ball->dy = -ball->dy;
+			}
+			if (limits[6]) {								//U_left
+				if (!limits[3]) ball->dx = -ball->dx;
+				if (!limits[7]) ball->dy = -ball->dy;
+			}
+			if (limits[8]) {								//U_right
+				if (!limits[5]) ball->dx = -ball->dx;
+				if (!limits[7]) ball->dy = -ball->dy;
+			}
+		} else {
+			if ((ball->ballx + ball->dx > VGA_WIDTH-1) || (ball->ballx + ball->dx < 1))
+				ball->dx = -ball->dx;
+			if ((ball->bally + ball->dy > VGA_HEIGHT-1) || (ball->bally + ball->dy < 1))
+				ball->dy = -ball->dy;
+		}
+	}
+	
+	return hit;
+}
+
+void destroy_block(struct bars *b[NUMBER_OF_BARS], char index)
+{
+	display_frectangle(b[index]->x, b[index]->y, b[index]->w, b[index]->h, BLACK);
+	b[index]->deleted = 1;
+}
+
+char is_in_bounds(struct ball_s *ball)
+{
+	unsigned int x = ball->ballx, y = ball->bally;
+
+	if (!(x < VGA_WIDTH-1) && (x > 0) && (y < VGA_HEIGHT-1) && (y > 0))
+	{
+		if ((ball->ballx + ball->dx > VGA_WIDTH-1) || (ball->ballx + ball->dx < 1))		ball->dx = -ball->dx;
+		if ((ball->bally + ball->dy > VGA_HEIGHT-1) || (ball->bally + ball->dy < 1))	ball->dy = -ball->dy;
+
+	}
+
+}
+
+char check_bar_vector (unsigned int X, unsigned int Y, struct bars *b[NUMBER_OF_BARS])
+{
+	for(int index = 0; index > NUMBER_OF_BARS; index++)
+		if(!b[index]->deleted)
+			if((X >= b[index]->x && X <= b[index]->x + b[index]->w) && (Y >= b[index]->y && Y <= b[index]->y + b[index]->h))
+				return index;
+	return 127;
+}
+
+char bars_col_test(struct ball_s *ball, struct bars *b[NUMBER_OF_BARS])
+{
+	char hit = 0;
+	char limits[9];
+	unsigned int ballx, bally;
+	ballx = ball->ballx; bally = ball->bally;
+
+	if (!(ball->spx == ball->spxcnt) || (ball->spy == ball->spycnt))	return hit;
+	
+	test_limits(ball, limits);
+	if (limits[3]) hit = A_LEFT;
+	if (limits[5]) hit = A_RIGHT;
+	if (limits[7]) hit = A_UP;
+	if (limits[1]) hit = A_DOWN;
+	if (limits[0]) hit = A_DOWN_LEFT;
+	if (limits[2]) hit = A_DOWN_RIGHT;
+	if (limits[6]) hit = A_UP_LEFT;
+	if (limits[8]) hit = A_UP_RIGHT;
+
+	if (!(ballx < VGA_WIDTH-1) && (ballx > 0) && (bally < VGA_HEIGHT-1) && (bally > 0))
+	{
+		if ((ballx + ball->dx > VGA_WIDTH-1) || (ballx + ball->dx < 1))		ball->dx = -ball->dx;
+		if ((bally + ball->dy > VGA_HEIGHT-1) || (bally + ball->dy < 1))	ball->dy = -ball->dy;
+		return hit;
+	}
+
+	if (limits[8]) /*UP_RIGHT*/
+	{
+		if (limits[5]) /*RIGHT*/{
+			destroy_block(b, check_bar_vector(ballx + 1, bally, b));
+			ball->dx = -ball->dx;}
+		if (limits[7]) /*UP*/	{
+			destroy_block(b, check_bar_vector(ballx, bally - 1, b));
+			ball->dy = -ball->dy;}
+		destroy_block(b, check_bar_vector(ballx + 1, bally - 1, b));
+		ball->dx = -ball->dx;
+		ball->dy = -ball->dy;}
+
+	if (limits[0]) /*DOWN_LEFT*/
+	{
+		if (limits[3]) /*LEFT*/	{
+			destroy_block(b, check_bar_vector(ballx - 1, bally, b));
+			ball->dx = -ball->dx;}
+		if (limits[1]) /*DOWN*/	{
+			destroy_block(b, check_bar_vector(ballx, bally + 1, b));
+			ball->dy = -ball->dy;}
+
+		destroy_block(b, check_bar_vector(ballx - 1, bally + 1, b));
+		ball->dx = -ball->dx;
+		ball->dy = -ball->dy;}
+
+	if (limits[6] && !(limits[7] || limits[3])) { 
+		destroy_block(b, check_bar_vector(ballx - 1, bally - 1, b));
+		ball->dx = -ball->dx;
+		ball->dy = -ball->dy;};
+
+	if (limits[2] && !(limits[1] || limits[5])) { 
+		destroy_block(b, check_bar_vector(ballx + 1, bally + 1, b));
+		ball->dx = -ball->dx;
+		ball->dy = -ball->dy;};
+	return hit;
+}
+
+char padd_col_test(struct ball_s *ball)
+{}
+
+void update_ball(struct ball_s *ball, char hit)
+{
+	ball->last_ballx = ball->ballx;
+	ball->last_bally = ball->bally;
+	
+	if (hit) {
+		ball->spxcnt = 1;
+		ball->spycnt = 1;
+	}
+	
+	if (--ball->spxcnt == 0) {
+		ball->spxcnt = ball->spx;
+		ball->ballx = ball->ballx + ball->dx;
+	}
+	if (--ball->spycnt == 0) {
+		ball->spycnt = ball->spy;
+		ball->bally = ball->bally + ball->dy;
+	}
+
+	if ((ball->spx == ball->spxcnt) || (ball->spy == ball->spycnt)) {
+		display_pixel(ball->last_ballx, ball->last_bally, BLACK);
+		display_pixel(ball->ballx, ball->bally, WHITE);
+	}
+}
+
+void get_input(struct paddle *p)
+{
+	if (GPIOB->IN & MASK_P10) { // left
+		int temp = p->x;
+		p->x = (p->x - p->spx < 0 ? 0 : p->x - p->spx);
+		
+		display_frectangle(temp, p->y, p->w, p->h, BLACK);
+		display_frectangle(p->x, p->y, p->w, p->h, p->cor);
+	}	
+	if (GPIOB->IN & MASK_P11) { // right
+		int temp = p->x;
+		p->x = (p->x + p->spx > 300 ? 300 : p->x + p->spx);
+		display_frectangle(temp, p->y, p->w, p->h, BLACK);
+		display_frectangle(p->x, p->y, p->w, p->h, p->cor);
+	}
+}
+
+int main(void)
+{
+	struct ball_s	ball1, ball2, ball3;
+	struct paddle	pad;
+	struct ball_s	*pball1 = &ball1;
+	struct ball_s	*pball2 = &ball2;
+	struct ball_s	*pball3 = &ball3;
+	struct paddle	*pad_pointer = &pad;
+	struct bars		*b[NUMBER_OF_BARS];
+	char hit;
+	char dir;
+	
+	heap_init((uint32_t *)&_heap_start, 8192);
+
+	for (int i = 0; i < NUMBER_OF_BARS; i++) b[i] = malloc(sizeof(struct bars));
+
+	init_display(b);
+	init_paddle(pad_pointer);
+	init_ball(pball1, 20, 200, 1, -1, 900, 900);
+	init_input();
+
+	while (1) {
+		// if (pball1->bally <= 85 || pball1->bally >= 5) 
+		hit = test_collision(pball1, &dir, b);
+		update_ball(pball1, hit);
+		get_input(pad_pointer);
+	}
+
+	return 0;
+}
